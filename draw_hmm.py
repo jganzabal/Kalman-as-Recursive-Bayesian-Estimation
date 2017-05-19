@@ -70,3 +70,37 @@ def draw_infinite(state1=0, state2=1, text=0.1):
     plt.gca().add_patch(ellipse)
     arrow2 = FancyArrow(1-0.01, 0, 0.01, 0, width=arrow_width, length_includes_head=False, head_width=None, head_length=None, shape='full', overhang=0, head_starts_at_zero=False, color='k')
     plt.gca().add_patch(arrow2)
+
+def plot_basic_hmm_model(N = 21, N_states_visible = 10,stay_step_prob = 0.2, one_step_prob = 0.50, two_step_prob = 0.3, circular = False, figsize = (20,10)):
+    plt.figure(figsize = figsize)
+    state = 1
+    
+    if circular:
+        N_states_visible = N_states_visible - 1
+        draw_state(state = state, state_label = N)
+        if stay_step_prob>0:
+            draw_self_transition(state = state, text = stay_step_prob)
+        if one_step_prob>0:
+            draw_transition(state1 = state, state2 = state+1, text = one_step_prob)
+        if two_step_prob>0:
+            draw_transition(state1 = state, state2 = state+2, text = two_step_prob)
+        draw_observed(state = state, state_label = N)
+    for s in range(N_states_visible):
+        state = state + 1
+        draw_state(state = state, state_label = state-1)
+        if stay_step_prob>0:
+            draw_self_transition(state = state, text = stay_step_prob)
+        if s<(N_states_visible-1):
+            if one_step_prob>0:
+                draw_transition(state1 = state, state2 = state+1, text = one_step_prob)
+        if s<(N_states_visible-2):
+            if two_step_prob>0:
+                draw_transition(state1 = state, state2 = state+2, text = two_step_prob)
+        draw_observed(state = state, state_label = state-1)
+
+    if circular:
+        draw_infinite(state, state+1)
+    plt.axis('scaled')
+    plt.axis('off')
+
+    plt.show()

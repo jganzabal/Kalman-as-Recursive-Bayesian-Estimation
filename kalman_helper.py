@@ -14,17 +14,19 @@ def predict(mean1, var1, mean2, var2):
     new_var = var1 + var2
     return [new_mean, new_var]
 
-def get_observation_distribution(indexes, loc = 1, scale = 2):
+def get_exponential_distribution_symetric(indexes, loc = 1, scale = 2):
     center = int(int(len(indexes)+1)/2)
     exponential_dist = np.exp(-abs(indexes-center)/scale)
     exponential_dist = exponential_dist/exponential_dist.sum()
     n = center - loc
     return np.roll(exponential_dist,-n)
 
-def get_next_step_distribution(indexes, scale = 2):
+def get_exponential_distribution(indexes, loc = 1, scale = 2, mirror = False):
     exponential_dist = np.exp(-abs(indexes)/scale)
     exponential_dist = exponential_dist/exponential_dist.sum()
-    return np.roll(exponential_dist,1)
+    if mirror:
+        return np.roll(exponential_dist[::-1],loc)
+    return np.roll(exponential_dist,loc-1)
 
 def plot_distribution(indexes, states_probabilities, title = ''):
     width = 1/1.5
