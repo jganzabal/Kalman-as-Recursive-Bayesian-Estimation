@@ -28,13 +28,47 @@ def get_exponential_distribution(indexes, loc = 1, scale = 2, mirror = False):
         return np.roll(exponential_dist[::-1],loc)
     return np.roll(exponential_dist,loc-1)
 
-def plot_distribution(indexes, states_probabilities, title = ''):
+def plot_distribution(data, title = '', fig = None, color= 'b', str_indexes = None, rotation = 0):
+    N = len(data)
+    indexes = np.linspace(1,N,N)
+    if fig is None:
+        fig, ax = plt.subplots(figsize=(20, 3))
     width = 1/1.5
-    plt.figure(figsize=(20, 3))
-    plt.bar(indexes, states_probabilities, width=width)
-    plt.xticks(indexes)
+    plt.bar(indexes, data, width=width, color= color)
+    plt.xticks(rotation=rotation)
+    if str_indexes is None:
+        plt.xticks(indexes)
+    else:
+        plt.xticks(indexes, str_indexes)
     plt.title(title)
-    plt.show()
+
+def plot_iteration(indexes, action, observed, prior, observation_not_mirr, update, prediction, fig = None, color= 'b'):
+    if fig is None:
+        fig, ax = plt.subplots(3,2,figsize=(20, 3))
+    ax = fig.axes
+    width = 1/1.5
+    fig.sharex = True
+    plt.xticks(indexes)
+    ax[0].bar(indexes, action, width=width, color= color)
+    ax[0].set_title("Action")
+
+    ax[1].bar(indexes, observed, width=width, color= color)
+    ax[1].set_title("Observed mirrored")
+
+    ax[2].bar(indexes, prior, width=width, color= color)
+    ax[2].set_title("Prior")
+
+    ax[3].bar(indexes, observation_not_mirr, width=width, color= color)
+    #ax[1].set_xticks(indexes)
+    ax[3].set_title("Observation")
+
+    ax[4].bar(indexes, update, width=width, color= color)
+    #ax[2].set_xticks(indexes)
+    ax[4].set_title("Update")
+
+    ax[5].bar(indexes, prediction, width=width, color= color)
+    #ax[3].set_xticks(indexes)
+    ax[5].set_title("Prediction")
 
 def after_observation_distribution_update(states_distribution, observation_dist):
     new_distribution = states_distribution * observation_dist

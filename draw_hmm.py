@@ -1,5 +1,7 @@
 from matplotlib.patches import Ellipse, Arc, ConnectionPatch, ConnectionStyle, FancyArrow
 from matplotlib import pyplot as plt
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+
 delta = 2
 arrow_width = 0.03
 
@@ -71,8 +73,14 @@ def draw_infinite(state1=0, state2=1, text=0.1):
     arrow2 = FancyArrow(1-0.01, 0, 0.01, 0, width=arrow_width, length_includes_head=False, head_width=None, head_length=None, shape='full', overhang=0, head_starts_at_zero=False, color='k')
     plt.gca().add_patch(arrow2)
 
-def plot_basic_hmm_model(N = 21, N_states_visible = 10,stay_step_prob = 0.2, one_step_prob = 0.50, two_step_prob = 0.3, circular = False, figsize = (20,10)):
-    plt.figure(figsize = figsize)
+def draw_image(x, y, file, ax):
+    im = plt.imread(file)
+    oi = OffsetImage(im, zoom = 0.15)
+    box = AnnotationBbox(oi, (x, y), frameon=False)
+    ax.add_artist(box)
+
+def plot_basic_hmm_model(N = 21, N_states_visible = 10,stay_step_prob = 0.2, one_step_prob = 0.50, two_step_prob = 0.3, circular = False, figsize = (20,3), images_map = None):
+    fig, ax = plt.subplots(figsize=figsize)
     state = 1
     
     if circular:
@@ -97,10 +105,48 @@ def plot_basic_hmm_model(N = 21, N_states_visible = 10,stay_step_prob = 0.2, one
             if two_step_prob>0:
                 draw_transition(state1 = state, state2 = state+2, text = two_step_prob)
         draw_observed(state = state, state_label = state-1)
-
+        if images_map is not None:
+            pos_circle = plt.Circle((state*2, -3.2), radius=0, fill=False)
+            plt.gca().add_patch(pos_circle)
+            draw_image(2*state, -3.2, images_map[state-2], ax)
+    
     if circular:
         draw_infinite(state, state+1)
     plt.axis('scaled')
     plt.axis('off')
 
     plt.show()
+
+import numpy as np
+def create_hist_image(x, file):
+    i = np.linspace(0,len(x)-1, len(x))
+    f, ax = plt.subplots()
+    #ax.xaxis.tick_top()
+    for spine in plt.gca().spines.values():
+        spine.set_visible(False)
+    plt.bar(i,x, linewidth=0)
+    plt.xticks(i, ['d','w'])
+
+    plt.tick_params(top='off', bottom='off', left='off', right='off', labelleft='off', labelbottom='on')
+    #plt.axis('off')
+    # We change the fontsize of minor ticks label 
+    plt.tick_params(axis='both', which='major', labelsize=70)
+    #plt.tick_params(axis='both', which='minor', labelsize=8)
+    #ax.get_yaxis().set_visible(False)
+    plt.tight_layout()
+    plt.savefig(file)
+
+def get_image_map_sensor(likelihood):
+    images_map = []
+    for i in range(len(likelihood)):
+        filename = 'door_%03d'%int(likelihood[i]*100)+'.png'
+        images_map.append(filename)        
+    return images_map
+
+
+#hmm.create_hist_image([1,0],'door_100.png')
+#hmm.create_hist_image([0.90,0.1],'door_090.png')
+#hmm.create_hist_image([0.75,0.25],'door_075.png')
+#hmm.create_hist_image([0.2,0.8],'door_020.png')
+#hmm.create_hist_image([0.05,0.95],'door_005.png')
+#hmm.create_hist_image([0,1],'door_000.png')
