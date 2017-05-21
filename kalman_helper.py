@@ -117,3 +117,21 @@ def plot_robot_room(N = 21, loc = 0):
     plt.axis('scaled')
     plt.axis('off')
     plt.show()
+
+# Histogram filters
+
+def convolve(x1, x2):
+    conv = np.zeros(len(x1))
+    for i in range(len(x2)):
+        conv = conv + x2[i]*np.roll(x1,i)
+    return conv
+
+def get_room_observation_likelihood(N = 33, doors = np.array([4, 11, 26]), pulse = np.array([0.2, 0.8, 1, 0.8, 0.2]), noise = 0.05):
+    uniform = np.zeros(N)
+    uniform[doors-1] = 1
+    unnormalized = np.roll(convolve(uniform, pulse),-int((len(pulse)-1)/2))
+    unnormalized[unnormalized==0] = noise
+    likelihood = {}
+    likelihood['door'] = unnormalized
+    likelihood['wall'] = 1-unnormalized
+    return likelihood
