@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 from matplotlib.patches import Arc
 
-def plot_robot_room(N = 21, loc = 0, doors = []):
+def plot_robot_room(N = 21, loc = 0, doors = [], sample_stats = None):
     pos_radius = 0.8
     outer_raius = 1
     inner_big_radius = 0.95
@@ -20,12 +20,7 @@ def plot_robot_room(N = 21, loc = 0, doors = []):
     for i in range(N):
         x = pos_radius*np.cos(angle)
         y = pos_radius*np.sin(angle)
-        if (i+1) == loc:
-            box = AnnotationBbox(oi, (x, y), frameon=False)
-            ax.add_artist(box)
-            pos_circle = plt.Circle((x, y), radius=small_radius, fill=True, color = 'y')
-        else:
-            pos_circle = plt.Circle((x, y), radius=small_radius, fill=False, color = 'g')
+        pos_circle = plt.Circle((x, y), radius=small_radius, fill=False, color = 'g')
         plt.gca().add_patch(pos_circle)
         angle = angle + delta_angle
         plt.text(x, y, str(i+1), fontsize = 12, horizontalalignment='center', verticalalignment='center')
@@ -40,6 +35,28 @@ def plot_robot_room(N = 21, loc = 0, doors = []):
     for door in doors:
         door = Arc([0,0],inner_big_radius*2,inner_big_radius*2,angle=delta_angle_grad*door- delta_angle_grad*3/2,theta1=0, theta2=delta_angle_grad, color='y', linewidth='10')
         plt.gca().add_patch(door)
+
+    stats_radius = 1.1
+    if sample_stats is not None:
+        max_door = 0
+        for sample_stat in sample_stats:
+            if sample_stat is not None:
+                if 'door' in sample_stat:
+                    if max_door<sample_stat['door']:
+                        max_door = sample_stat['door']
+        for i, sample_stat in enumerate(sample_stats):
+            if sample_stat is not None:
+                if 'door' in sample_stat:
+                    prediction_arc = Arc([0,0],stats_radius*2,stats_radius*2,angle=(delta_angle_grad*(i+1) - delta_angle_grad*3/2),theta1=0, theta2=delta_angle_grad, color='g', linewidth=20*sample_stat['door']/max_door)
+                    plt.gca().add_patch(prediction_arc)
+    
+    # Draw robot
+    x = pos_radius*np.cos(delta_angle*(loc-1))
+    y = pos_radius*np.sin(delta_angle*(loc-1))
+    box = AnnotationBbox(oi, (x, y), frameon=False)
+    ax.add_artist(box)
+    pos_circle = plt.Circle((x, y), radius=small_radius, fill=True, color = 'y')
+    plt.gca().add_patch(pos_circle)
 
     plt.axis('scaled')
     plt.axis('off')
