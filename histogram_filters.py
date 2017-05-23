@@ -2,6 +2,19 @@ import numpy as np
 from collections import Counter
 from matplotlib import pyplot as plt
 
+
+## Room observation likelihood
+def get_room_observation_likelihood(N = 33, doors = np.array([4, 11, 26]), pulse = np.array([0.2, 0.8, 1, 0.8, 0.2]), noise = 0.05):
+    uniform = np.zeros(N)
+    uniform[doors-1] = 1
+    unnormalized = np.roll(convolve(uniform, pulse),-int((len(pulse)-1)/2))
+    unnormalized[unnormalized==0] = noise
+    likelihood = {}
+    likelihood['door'] = unnormalized
+    likelihood['wall'] = 1-unnormalized
+    return likelihood
+
+## Additive noise functions
 def get_exponential_distribution_symetric(N=21, loc=1, scale=2):
     indexes = np.linspace(1, N, N)
     center = int(int(len(indexes)+1)/2)
@@ -18,21 +31,32 @@ def get_exponential_distribution(N=21, loc=1, scale=2, mirror=False):
         return np.roll(exponential_dist[::-1], loc)
     return np.roll(exponential_dist, loc-1)
 
-def update(p, X, likelihood):
-    # p: prior probability
-    # X: Measurement. Measured position
-    # posterior not normalized
-    posterior = likelihood[X]*p
-    # Normalize it
-    normalized = posterior/posterior.sum()
-    return normalized
+## Walking functions
+def get_walking_noise_example_1(N):
+    W = np.zeros(N)
+    W[0] = 0.15
+    W[1] = 0.50
+    W[2] = 0.35
+    return W
 
-def convolve(x1, x2):
-    conv = np.zeros(len(x1))
-    for i in range(len(x2)):
-        conv = conv + x2[i]*np.roll(x1, i)
-    return conv
+def get_walking_noise_example_2(N):
+    W = np.zeros(N)
+    W[0] = 0.15
+    W[1] = 0.70
+    W[2] = 0.15
+    return W
 
+def get_walking_noise_perfect_1(N):
+    W = np.zeros(N)
+    W[1] = 1
+    return W
+
+def get_walking_noise_perfect_3(N):
+    W = np.zeros(N)
+    W[3] = 1
+    return W
+
+## Generative functions
 def get_random_sample(random_variable):
     pick_random = np.random.uniform()
     sum_prob = 0
@@ -41,6 +65,7 @@ def get_random_sample(random_variable):
         sum_prob = sum_prob + random_variable[i][1]
         i = i + 1
     return random_variable[i-1][0]
+
 
 def generate_sample(likelihood, W, initial_state=1, steps = 37):
     current_state = initial_state-1
@@ -78,10 +103,27 @@ def generate_sample(likelihood, W, initial_state=1, steps = 37):
     for size, cant in steps_dict.items():
         loc = loc + size*cant
     loc = loc%N
-    
+
     steps_stats = np.array(list(Counter(random_step_list).values()))
     steps_stats = steps_stats/steps_stats.sum()
     return measurements, sample_stats, steps_stats, loc
+
+## Histogram filter functions 
+
+def convolve(x1, x2):
+    conv = np.zeros(len(x1))
+    for i in range(len(x2)):
+        conv = conv + x2[i]*np.roll(x1, i)
+    return conv
+
+def update(p, X, likelihood):
+    # p: prior probability
+    # X: Measurement. Measured position
+    # posterior not normalized
+    posterior = likelihood[X]*p
+    # Normalize it
+    normalized = posterior/posterior.sum()
+    return normalized
 
 def get_hist_circular_mean_var(hist, zero_centered = True):
     N = len(hist)
@@ -135,6 +177,7 @@ def run_histogram_filter(W, measurements, likelihood, prior):
         var_list_pred.append(variance_pred)
     return posterior, mean_list, var_list, mean_list_pred, var_list_pred
 
+## Ploting functions
 def plot_estimations(mean_list, var_list, mean_list_pred, var_list_pred, fr=0, to=-1):
     if to < 0:
         to = len(mean_list)
@@ -147,26 +190,16 @@ def plot_estimations(mean_list, var_list, mean_list_pred, var_list_pred, fr=0, t
     plt.plot((mean_list_pred_1-np.sqrt(var_list_pred))[fr:to], color='y')
     plt.show()
 
-def get_walking_noise_example_1(N):
-    W = np.zeros(N)
-    W[0] = 0.15
-    W[1] = 0.50
-    W[2] = 0.35
-    return W
-
-def get_walking_noise_example_2(N):
-    W = np.zeros(N)
-    W[0] = 0.15
-    W[1] = 0.70
-    W[2] = 0.15
-    return W
-
-def get_walking_noise_perfect_1(N):
-    W = np.zeros(N)
-    W[1] = 1
-    return W
-
-def get_walking_noise_perfect_3(N):
-    W = np.zeros(N)
-    W[3] = 1
-    return W
+def plot_distribution(data, title = '', fig = None, color= 'b', str_indexes = None, rotation = 0):
+    N = len(data)
+    indexes = np.linspace(1,N,N)
+    if fig is None:
+        fig, ax = plt.subplots(figsize=(20, 3))
+    width = 1/1.5
+    plt.bar(indexes, data, width=width, color= color)
+    plt.xticks(rotation=rotation)
+    if str_indexes is None:
+        plt.xticks(indexes)
+    else:
+        plt.xticks(indexes, str_indexes)
+    plt.title(title)
