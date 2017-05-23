@@ -39,16 +39,39 @@ def plot_robot_room(N = 21, loc = 0, doors = [], sample_stats = None):
     stats_radius = 1.1
     if sample_stats is not None:
         max_door = 0
+        max_hist = 0
+        max_spread_hist = 0
         for sample_stat in sample_stats:
             if sample_stat is not None:
                 if 'door' in sample_stat:
                     if max_door<sample_stat['door']:
                         max_door = sample_stat['door']
+                if not set(range(N+1)).isdisjoint(list(sample_stat.keys())):
+                    maximun = max(list(sample_stat.values()))
+                    spread = max(list(sample_stat.keys())) - min(list(sample_stat.keys()))
+                    if max_hist<maximun:
+                        max_hist = maximun
+                    if max_spread_hist<spread:
+                        max_spread_hist = spread
+        
         for i, sample_stat in enumerate(sample_stats):
             if sample_stat is not None:
                 if 'door' in sample_stat:
-                    prediction_arc = Arc([0,0],stats_radius*2,stats_radius*2,angle=(delta_angle_grad*(i+1) - delta_angle_grad*3/2),theta1=0, theta2=delta_angle_grad, color='g', linewidth=20*sample_stat['door']/max_door)
+                    prediction_arc = Arc([0,0],stats_radius*2,stats_radius*2,angle=(delta_angle_grad*(i+1) - delta_angle_grad*3/2),
+                                        theta1=0, theta2=delta_angle_grad, color='g', linewidth=20*sample_stat['door']/max_door)
                     plt.gca().add_patch(prediction_arc)
+                if not set(range(N+1)).isdisjoint(list(sample_stat.keys())):
+                    angle_width = delta_angle_grad/(N+2)
+                    angle_base_pos = (delta_angle_grad*(i+1) - delta_angle_grad*3/2)
+                    prediction_arc = Arc([0,0],stats_radius*2,stats_radius*2,angle=angle_base_pos,
+                                        theta1=0, theta2=angle_width/4  , color='k', linewidth=40.0)
+                    plt.gca().add_patch(prediction_arc)
+                    for key, value in sample_stat.items():
+                        angle_position = angle_base_pos + (key+1)*angle_width
+
+                        prediction_arc = Arc([0,0],stats_radius*2,stats_radius*2,angle=0,
+                                        theta1=angle_position-angle_width, theta2=angle_position, color='g', linewidth=20.0*value/max_hist)
+                        plt.gca().add_patch(prediction_arc)
     
     # Draw robot
     x = pos_radius*np.cos(delta_angle*(loc-1))
