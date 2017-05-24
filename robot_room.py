@@ -12,7 +12,7 @@ def plot_robot_room(N = 21, loc = 0, doors = [], sample_stats = None):
     delta_angle = 2*np.pi/N
     fig, ax = plt.subplots(figsize=(8,8))
     #plt.figure(figsize=(5,5))
-    im = plt.imread('robot.png')
+    im = plt.imread("./images/robot.png")
     oi = OffsetImage(im, zoom = 0.25)
     rx = 0
     ry = 0
