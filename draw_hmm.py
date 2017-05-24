@@ -136,10 +136,10 @@ def create_hist_image(x, file):
     plt.tight_layout()
     plt.savefig(file)
 
-def get_image_map_sensor(likelihood):
+def get_image_map_sensor(likelihood, folder='./images/'):
     images_map = []
     for i in range(len(likelihood)):
-        filename = 'door_%03d'%int(likelihood[i]*100)+'.png'
+        filename = folder+'door_%03d'%int(likelihood[i]*100)+'.png'
         images_map.append(filename)        
     return images_map
 
