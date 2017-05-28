@@ -25,31 +25,44 @@ def plot_gaussian(mu=0, sig= 1, points = 200, N = 2, marker=None, label = None, 
 
     return x, y
 
-def update(mean1, var1, mean2, var2):
+def gauss_pdf_mult(mean1, var1, mean2, var2):
     new_mean = float(var2 * mean1 + var1 * mean2) / (var1 + var2)
     new_var = 1./(1./var1 + 1./var2)
     return [new_mean, new_var]
 
-def predict(mean1, var1, mean2, var2):
+def update(h, sigma_v, Z, X_est_prior ,P_prior):
+    P = P_prior*sigma_v/(P_prior*(h**2) + sigma_v)
+    X_est = P*(h*Z/sigma_v + X_est_prior/P_prior)
+    return X_est, P
+
+def gauss_var_add(mean1, var1, mean2, var2):
     new_mean = mean1 + mean2
     new_var = var1 + var2
     return [new_mean, new_var]
 
-def plot_kalman_process(mu, sig, measurement_sig, motion_sig, points, measurements, motion):
-    x = np.linspace(mu-2*10, mu+2*10, points)
+def predict(sigma_w, X_updated, P_updated, a = 1, b = 1, U = 1):
+    X_predicted = a*X_updated + b*U
+    P_predicted = (a**2)*sigma_w + P_updated
+    return X_predicted, P_predicted
+
+def plot_kalman_process(measurements, X_est_prior, P_prior, sigma_v, sigma_w, points = 200, h = 1, a = 1, b = 1, U = 1):
+    x = np.linspace(X_est_prior-2*2, X_est_prior+2*10, points)
     rows = int(np.ceil(len(measurements)/3))
     f, ax = plt.subplots(rows, 3, sharey=True, sharex=True, figsize = (20,10))
     ax = ax.flatten()
     for n in range(len(measurements)):
-        label_data = '$\mu=%0.2f$  -  $\sigma^2=%0.2f$'%(mu,sig)
-        plot_gaussian(mu=mu, sig= sig, points = points, N = 2, x=x, label = '(Initial) '+label_data, color = 'b', ax=ax[n])
-        [mu, sig] = update(mu, sig, measurements[n], measurement_sig)
-        label_data = '$\mu=%0.2f$  -  $\sigma^2=%0.2f$'%(mu,sig)
-        plot_gaussian(mu=mu, sig= sig, points = points, N = 2, x=x, label = '(Update) '+label_data, color = 'r', ax=ax[n])
-        #print('update:',[mu, sig])
-        [mu, sig] = predict(mu, sig, motion[n], motion_sig)
-        label_data = '$\mu=%0.2f$  -  $\sigma^2=%0.2f$'%(mu,sig)
-        plot_gaussian(mu=mu, sig= sig, points = points, N = 2, x=x, label = '(Predict) '+label_data, color = 'y', ax=ax[n])
+        label_data = '$\mu=%0.2f$  -  $\sigma^2=%0.2f$'%(X_est_prior,P_prior)
+        plot_gaussian(mu=X_est_prior, sig= P_prior, points = points, N = 2, x=x, label = '(Initial) '+label_data, color = 'b', ax=ax[n])
+        Z = measurements[n]
+        X_updated, P_updated = update(h, sigma_v, Z, X_est_prior ,P_prior)
+        label_data = '$\mu=%0.2f$  -  $\sigma^2=%0.2f$'%(X_updated,P_updated)
+        plot_gaussian(mu=X_updated, sig= P_updated, points = points, N = 2, x=x, label = '(Update) '+label_data, color = 'r', ax=ax[n])
+        
+        X_predicted, P_predicted = predict(sigma_w, X_updated, P_updated, a = a, b = b, U = U)
+        label_data = '$\mu=%0.2f$  -  $\sigma^2=%0.2f$'%(X_predicted,P_predicted)
+        plot_gaussian(mu=X_predicted, sig= P_predicted, points = points, N = 2, x=x, label = '(Predict) '+label_data, color = 'y', ax=ax[n])
         #print('predict:',[mu, sig])
         ax[n].legend()
+        X_est_prior = X_predicted
+        P_prior = P_predicted
     plt.show()
