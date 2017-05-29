@@ -63,6 +63,37 @@ def plot_kalman_process(measurements, X_est_prior, P_prior, sigma_v, sigma_w, po
         plot_gaussian(mu=X_predicted, sig= P_predicted, points = points, N = 2, x=x, label = '(Predict) '+label_data, color = 'y', ax=ax[n])
         #print('predict:',[mu, sig])
         ax[n].legend()
+        ax[n].set_xlabel('Z = %0.2f'%Z)
         X_est_prior = X_predicted
         P_prior = P_predicted
     plt.show()
+
+
+def generate_sample(X_o = 0, sigma_w = 0.1,sigma_v = 0.1, h = 1, a = 1, b = 1, U = 1, steps = 10):
+    measurements = [h*X_o + np.random.normal(0,sigma_v)]
+    X_k = X_o
+    for i in range(steps):
+        X_k = a*X_k + b*U + np.random.normal(0,sigma_w)
+        Z = h*X_k + np.random.normal(0,sigma_v)
+        measurements.append(Z)
+    return measurements
+
+def kalman_filter(measurements, X_est_prior, P_prior, sigma_v, sigma_w, h = 1, a = 1, b = 1, U = 1, predict_ratio = 1):
+    updated_means = [X_est_prior]
+    update_variances = [P_prior]
+    for n in range(len(measurements)):
+        Z = measurements[n]
+        if n%predict_ratio == 0:
+            X_updated, P_updated = update(h, sigma_v, Z, X_est_prior ,P_prior)
+        else:
+            X_updated, P_updated = X_predicted, P_predicted
+        
+        updated_means.append(X_updated)
+        update_variances.append(P_updated)
+            
+        X_predicted, P_predicted = predict(sigma_w, X_updated, P_updated, a = a, b = b, U = U)
+        
+        
+        X_est_prior = X_predicted
+        P_prior = P_predicted
+    return updated_means, update_variances
