@@ -3,14 +3,14 @@ from matplotlib import pyplot as plt
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 from matplotlib.patches import Arc
 
-def plot_robot_room(N = 21, loc = 0, doors = [], sample_stats = None):
+def plot_robot_room(N = 21, loc = 0, doors = [], sample_stats = None, figsize=(8,8)):
     pos_radius = 0.8
     outer_raius = 1
     inner_big_radius = 0.95
     small_radius = 0.1*21.0/N
     angle = 0
     delta_angle = 2*np.pi/N
-    fig, ax = plt.subplots(figsize=(8,8))
+    fig, ax = plt.subplots(figsize=figsize)
     #plt.figure(figsize=(5,5))
     im = plt.imread("./images/robot.png")
     oi = OffsetImage(im, zoom = 0.25)
