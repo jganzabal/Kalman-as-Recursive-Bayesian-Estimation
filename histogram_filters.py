@@ -103,9 +103,8 @@ def generate_sample(likelihood, W, initial_state=1, steps = 37):
     for size, cant in steps_dict.items():
         loc = loc + size*cant
     loc = loc%N
-
-    steps_stats = np.array(list(Counter(random_step_list).values()))
-    steps_stats = steps_stats/steps_stats.sum()
+    transition_hist = Counter(random_step_list)
+    steps_stats = [transition_hist[i]/steps for i in range(len(transition_hist))]
     return measurements, sample_stats, steps_stats, loc
 
 ## Histogram filter functions 

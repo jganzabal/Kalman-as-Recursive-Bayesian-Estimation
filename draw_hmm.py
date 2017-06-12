@@ -108,7 +108,7 @@ def plot_basic_hmm_model(N = 21, N_states_visible = 10,stay_step_prob = 0.2, one
         if images_map is not None:
             pos_circle = plt.Circle((state*2, -3.2), radius=0, fill=False)
             plt.gca().add_patch(pos_circle)
-            draw_image(2*state, -3.2, images_map[state-2], ax)
+            draw_image(2*state, -3.3, images_map[state-2], ax)
     
     if circular:
         draw_infinite(state, state+1)
