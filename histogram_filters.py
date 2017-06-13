@@ -214,3 +214,55 @@ def plot_distribution(data, title = '', fig = None, color= 'b', str_indexes = No
         plt.xticks(indexes, str_indexes)
     plt.title(title)
 
+from ipywidgets import *
+from scipy.stats import entropy
+
+def histogram_filter(W, measurements, likelihood, prior):
+    # W: transition probability distribution
+    # measurements: It is a list of observations. The i'th observation Xi = measurements[i]
+    # likelihood: It is a dict where likelihood[Xi] is the likelihood given observation Xi
+    # prior: The initial distribution, normaly with normalized entropy of 1 (Maximun confusion)
+    normalized_entropy = []
+    mean_array = []
+    var_array = []
+    for i in range(len(measurements)):
+        posterior = update(prior, measurements[i], likelihood)
+        normalized_entropy.append(entropy(posterior, base = 2)/np.log2(len(prior)))
+        mean, variance = get_hist_circular_mean_var(posterior)
+        mean_array.append(mean)
+        var_array.append(variance)
+        predicted = prediction(posterior, W)
+        prior = predicted
+    return posterior, predicted, normalized_entropy, mean_array, var_array
+
+def plot_histogram_entropy_std(measurements, transition, likelihood, prior, n_steps = 1):
+        N = len(prior)
+        posterior, predicted, normalized_entropy, mean_array, var_array = histogram_filter(transition, 
+                                                                    measurements[:n_steps], 
+                                                                    likelihood, 
+                                                                    prior = np.ones(N)/N)
+        #print(measurements[:n_steps])
+        f = plt.figure(figsize=(20,10))
+        plt.subplot(2, 1, 1)
+        plot_distribution(posterior, title = 'normalized $P(S=k|X)$ - Posterior -', fig = f)
+        #plt.show()
+        #plt.figure(figsize=(20,5))
+        plt.subplot(2, 2, 3)
+        plt.title("Normalized entropy")
+        plt.plot(normalized_entropy)
+        plt.subplot(2, 2, 4)
+        plt.title("Standard deviation")
+        plt.plot(np.array(var_array)**(0.5))
+        plt.show()
+        print("normalized entropy of last posterior:",normalized_entropy[-1])
+
+
+def plot_interactive_histogram(measurements, transition, likelihood, prior, steps):
+    plot_histogram_result_interactive = lambda n_steps=10: plot_histogram_entropy_std(measurements, 
+                                                                                          transition, 
+                                                                                          likelihood,prior, 
+                                                                                          n_steps) 
+
+    interact(plot_histogram_result_interactive, n_steps = widgets.IntSlider(min=1,max=steps,
+                                                                            step=1,value=10, 
+                                                                            continuous_update=False))
