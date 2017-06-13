@@ -4,17 +4,36 @@ from matplotlib import pyplot as plt
 
 
 ## Room observation likelihood
-def get_room_observation_likelihood(N = 33, doors = np.array([4, 11, 26]), pulse = np.array([0.2, 0.8, 1, 0.8, 0.2]), noise = 0.05):
+def get_room_observation_likelihood(N=33, doors=np.array([4, 11, 26]),\
+                                    pulse=np.array([0.2, 0.8, 1, 0.8, 0.2]), noise=0.05):
     uniform = np.zeros(N)
     uniform[doors-1] = 1
-    unnormalized = np.roll(convolve(uniform, pulse),-int((len(pulse)-1)/2))
-    unnormalized[unnormalized==0] = noise
+    unnormalized = np.roll(convolve(uniform, pulse), -int((len(pulse)-1)/2))
+    unnormalized[unnormalized == 0] = noise
     likelihood = {}
     likelihood['door'] = unnormalized
     likelihood['wall'] = 1-unnormalized
     return likelihood
 
 ## Additive noise functions
+def get_gaussian_distribution(N=21, loc=1, scale=2):
+    center = int(int(N+1)/2)
+    x = np.linspace(1, N, N)
+    x = x - center
+    sigma = scale*2
+    pdf = np.exp(-x*x/(2*sigma))
+    n = center - loc
+    return np.roll(pdf/pdf.sum(), -n)
+
+def get_rayleigh_distribution(N=21, loc=1, scale=2):
+    center = int(int(N+1)/2)
+    x = np.linspace(1, N, N)
+    sigma = scale*4
+    x = x - center + np.sqrt(sigma)
+    pdf = (x >= 0)*(x*np.exp(-x*x/(2*sigma))/sigma)
+    n = center - loc
+    return np.roll(pdf/pdf.sum(), -n)
+
 def get_exponential_distribution_symetric(N=21, loc=1, scale=2):
     indexes = np.linspace(1, N, N)
     center = int(int(len(indexes)+1)/2)
@@ -67,7 +86,7 @@ def get_random_sample(random_variable):
     return random_variable[i-1][0]
 
 
-def generate_sample(likelihood, W, initial_state=1, steps = 37):
+def generate_sample(likelihood, W, initial_state=1, steps=37):
     current_state = initial_state-1
     sample = []
     measurements = []
@@ -96,7 +115,7 @@ def generate_sample(likelihood, W, initial_state=1, steps = 37):
 
         random_step_done = get_random_sample(random_step)
         random_step_list.append(random_step_done)
-        current_state = (current_state + random_step_done) % N 
+        current_state = (current_state + random_step_done) % N
 
     steps_dict = (Counter(random_step_list))
     loc = 1
@@ -113,7 +132,7 @@ def generate_sample(likelihood, W, initial_state=1, steps = 37):
     #steps_stats = [transition_hist[i]/steps for i in range(len(transition_hist))]
     return measurements, sample_stats, steps_stats, loc
 
-## Histogram filter functions 
+## Histogram filter functions
 
 def convolve(x1, x2):
     conv = np.zeros(len(x1))
@@ -135,7 +154,7 @@ def prediction(posterior, transition):
     # transition: transition probability distribution
     return convolve(posterior, transition)
 
-def get_hist_circular_mean_var(hist, zero_centered = True):
+def get_hist_circular_mean_var(hist, zero_centered=True):
     N = len(hist)
     idx = np.linspace(1, N, N)
     x = np.linspace(0, 2*np.pi*(N-1)/N, N)
@@ -200,19 +219,22 @@ def plot_estimations(mean_list, var_list, mean_list_pred, var_list_pred, fr=0, t
     plt.plot((mean_list_pred_1-np.sqrt(var_list_pred))[fr:to], color='y')
     plt.show()
 
-def plot_distribution(data, title = '', fig = None, color= 'b', str_indexes = None, rotation = 0):
+def plot_distribution(data, title='', fig=None, color='b', str_indexes=None, rotation=0, mark=None):
     N = len(data)
-    indexes = np.linspace(1,N,N)
+    indexes = np.linspace(1, N, N)
     if fig is None:
         fig, ax = plt.subplots(figsize=(20, 3))
     width = 1/1.5
-    plt.bar(indexes, data, width=width, color= color)
+    plt.bar(indexes, data, width=width, color=color)
     plt.xticks(rotation=rotation)
-    if str_indexes is None:
-        plt.xticks(indexes)
-    else:
-        plt.xticks(indexes, str_indexes)
+    if not str_indexes == -1:
+        if str_indexes is None:
+            plt.xticks(indexes)
+        else:
+            plt.xticks(indexes, str_indexes)
     plt.title(title)
+    if mark is not None:
+        plt.bar(mark, data[mark-1], width=width, color='r')
 
 from ipywidgets import *
 from scipy.stats import entropy
@@ -227,7 +249,7 @@ def histogram_filter(W, measurements, likelihood, prior):
     var_array = []
     for i in range(len(measurements)):
         posterior = update(prior, measurements[i], likelihood)
-        normalized_entropy.append(entropy(posterior, base = 2)/np.log2(len(prior)))
+        normalized_entropy.append(entropy(posterior, base=2)/np.log2(len(prior)))
         mean, variance = get_hist_circular_mean_var(posterior)
         mean_array.append(mean)
         var_array.append(variance)
@@ -235,34 +257,44 @@ def histogram_filter(W, measurements, likelihood, prior):
         prior = predicted
     return posterior, predicted, normalized_entropy, mean_array, var_array
 
-def plot_histogram_entropy_std(measurements, transition, likelihood, prior, n_steps = 1):
-        N = len(prior)
-        posterior, predicted, normalized_entropy, mean_array, var_array = histogram_filter(transition, 
-                                                                    measurements[:n_steps], 
-                                                                    likelihood, 
-                                                                    prior = np.ones(N)/N)
-        #print(measurements[:n_steps])
-        f = plt.figure(figsize=(20,10))
-        plt.subplot(2, 1, 1)
-        plot_distribution(posterior, title = 'normalized $P(S=k|X)$ - Posterior -', fig = f)
-        #plt.show()
-        #plt.figure(figsize=(20,5))
-        plt.subplot(2, 2, 3)
-        plt.title("Normalized entropy")
-        plt.plot(normalized_entropy)
-        plt.subplot(2, 2, 4)
-        plt.title("Standard deviation")
-        plt.plot(np.array(var_array)**(0.5))
-        plt.show()
-        print("normalized entropy of last posterior:",normalized_entropy[-1])
+def plot_histogram_entropy_std(measurements, transition, likelihood, prior, n_steps=1):
+    N = len(prior)
+    posterior, predicted, normalized_entropy, mean_array, var_array=histogram_filter(transition, 
+                                                                measurements[:n_steps], 
+                                                                likelihood, 
+                                                                prior=np.ones(N)/N)
+    #print(measurements[:n_steps])
+    f = plt.figure(figsize=(20,10))
+    plt.subplot(2, 1, 1)
+    plot_distribution(posterior, title='normalized $P(S=k|X)$ - Posterior -', fig=f)
+    #plt.show()
+    #plt.figure(figsize=(20,5))
+    plt.subplot(2, 2, 3)
+    plt.title("Normalized entropy")
+    plt.plot(normalized_entropy)
+    plt.subplot(2, 2, 4)
+    plt.title("Standard deviation")
+    plt.plot(np.array(var_array)**(0.5))
+    plt.show()
+    print("normalized entropy of last posterior:", normalized_entropy[-1])
 
 
-def plot_interactive_histogram(measurements, transition, likelihood, prior, steps):
-    plot_histogram_result_interactive = lambda n_steps=10: plot_histogram_entropy_std(measurements, 
-                                                                                          transition, 
-                                                                                          likelihood,prior, 
+def plot_interactive_histogram(measurements, transition, likelihood, prior, steps, initial_slider_pos=10):
+    plot_histogram_result_interactive = lambda n_steps=initial_slider_pos: plot_histogram_entropy_std(measurements, transition, 
+                                                                                          likelihood, prior, 
                                                                                           n_steps) 
 
-    interact(plot_histogram_result_interactive, n_steps = widgets.IntSlider(min=1,max=steps,
-                                                                            step=1,value=10, 
+    interact(plot_histogram_result_interactive, n_steps = widgets.IntSlider(min=1, max=steps,
+                                                                            step=1, value=initial_slider_pos,
                                                                             continuous_update=False))
+
+
+def get_likelihood(N, observation_func, scale=6):
+    likelihood = {}
+    for X_0 in range(N):
+        X = X_0 + 1
+        likelihood[X] = []
+        for k in range(N):
+            likelihood_k = observation_func(N= N, loc = k+1, scale=scale)
+            likelihood[X].append(likelihood_k[X-1])
+    return likelihood
