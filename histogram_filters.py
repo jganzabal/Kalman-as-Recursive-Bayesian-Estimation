@@ -104,7 +104,13 @@ def generate_sample(likelihood, W, initial_state=1, steps = 37):
         loc = loc + size*cant
     loc = loc%N
     transition_hist = Counter(random_step_list)
-    steps_stats = [transition_hist[i]/steps for i in range(len(transition_hist))]
+    steps_stats = []
+    for i in range(len(W)):
+        if i in transition_hist:
+            steps_stats.append(transition_hist[i]/steps)
+        else:
+            steps_stats.append(0)
+    #steps_stats = [transition_hist[i]/steps for i in range(len(transition_hist))]
     return measurements, sample_stats, steps_stats, loc
 
 ## Histogram filter functions 
@@ -123,6 +129,11 @@ def update(p, X, likelihood):
     # Normalize it
     normalized = posterior/posterior.sum()
     return normalized
+
+def prediction(posterior, transition):
+    # posterior: posterior probability distribution
+    # transition: transition probability distribution
+    return convolve(posterior, transition)
 
 def get_hist_circular_mean_var(hist, zero_centered = True):
     N = len(hist)
@@ -202,3 +213,4 @@ def plot_distribution(data, title = '', fig = None, color= 'b', str_indexes = No
     else:
         plt.xticks(indexes, str_indexes)
     plt.title(title)
+
