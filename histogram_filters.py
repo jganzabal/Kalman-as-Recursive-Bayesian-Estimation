@@ -253,8 +253,7 @@ def histogram_filter(W, measurements, likelihood, prior):
     return posterior, predicted, normalized_entropy, mean_array, var_array
 
 import matplotlib.patches as mpatches
-def plot_histogram_entropy_std(measurements, transition, likelihood, prior, n_steps=1, real_positions=None):
-    real_positions = real_positions[:n_steps]
+def plot_histogram_entropy_std(measurements, transition, likelihood, prior, n_steps=1, real_positions=None):    
     N = len(prior)
     posterior, predicted, normalized_entropy, mean_array, var_array\
                      = histogram_filter(transition,
@@ -272,7 +271,8 @@ def plot_histogram_entropy_std(measurements, transition, likelihood, prior, n_st
     plt.subplot(3, 2, 4)
     plt.title("Standard deviation")
     plt.plot(np.array(var_array)**(0.5))
-    if real_positions is not None:
+    if (real_positions is not None) and (type(measurements[0]) is not int):
+        real_positions = real_positions[:n_steps]
         plt.subplot(3, 1, 3)
         measurements_options = list(set(measurements[:n_steps]))
         color = ['r','b','g','y','k']
@@ -289,7 +289,14 @@ def plot_histogram_entropy_std(measurements, transition, likelihood, prior, n_st
         plt.legend(recs,measurements_options,loc=4)
         plt.xlabel('iteration')
         plt.ylabel('Robot position')
-        
+    elif (real_positions is not None):
+        plt.subplot(3, 1, 3)
+        plt.plot(measurements[:n_steps], label="Robot location measured")
+        plt.plot(real_positions[:n_steps], label="Robot real location")
+        plt.xlabel('iteration')
+        plt.ylabel('Robot position')
+        plt.legend()
+
     plt.show()
     print("normalized entropy of last posterior:", normalized_entropy[-1])
 
