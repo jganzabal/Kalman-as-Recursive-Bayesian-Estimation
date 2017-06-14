@@ -95,7 +95,7 @@ def generate_sample(likelihood, W, initial_state=1, steps=37):
     random_step = [(idxs[i], p) for i, p in enumerate(probs)]
 
     random_step_list = []
-
+    real_locations = []
     N = len(likelihood[list(likelihood.keys())[0]])
     sample_stats = [None for i in range(N)]
     for step in range(steps):
@@ -106,7 +106,7 @@ def generate_sample(likelihood, W, initial_state=1, steps=37):
         measure = get_random_sample(random_variable)
         measurements.append(measure)
         sample.append([current_state, measure])
-
+        real_locations.append(current_state)
         if sample_stats[current_state] is None:
             sample_stats[current_state] = {}
         if measure not in sample_stats[current_state]:
@@ -116,12 +116,7 @@ def generate_sample(likelihood, W, initial_state=1, steps=37):
         random_step_done = get_random_sample(random_step)
         random_step_list.append(random_step_done)
         current_state = (current_state + random_step_done) % N
-
-    steps_dict = (Counter(random_step_list))
-    loc = 1
-    for size, cant in steps_dict.items():
-        loc = loc + size*cant
-    loc = loc%N
+    
     transition_hist = Counter(random_step_list)
     steps_stats = []
     for i in range(len(W)):
@@ -130,7 +125,7 @@ def generate_sample(likelihood, W, initial_state=1, steps=37):
         else:
             steps_stats.append(0)
     #steps_stats = [transition_hist[i]/steps for i in range(len(transition_hist))]
-    return measurements, sample_stats, steps_stats, loc
+    return measurements, sample_stats, steps_stats, real_locations
 
 ## Histogram filter functions
 
@@ -257,32 +252,52 @@ def histogram_filter(W, measurements, likelihood, prior):
         prior = predicted
     return posterior, predicted, normalized_entropy, mean_array, var_array
 
-def plot_histogram_entropy_std(measurements, transition, likelihood, prior, n_steps=1):
+import matplotlib.patches as mpatches
+def plot_histogram_entropy_std(measurements, transition, likelihood, prior, n_steps=1, real_positions=None):
+    real_positions = real_positions[:n_steps]
     N = len(prior)
-    posterior, predicted, normalized_entropy, mean_array, var_array=histogram_filter(transition, 
-                                                                measurements[:n_steps], 
-                                                                likelihood, 
-                                                                prior=np.ones(N)/N)
-    #print(measurements[:n_steps])
-    f = plt.figure(figsize=(20,10))
-    plt.subplot(2, 1, 1)
+    posterior, predicted, normalized_entropy, mean_array, var_array\
+                     = histogram_filter(transition,
+                                        measurements[:n_steps],
+                                        likelihood,
+                                        prior=np.ones(N)/N)
+    f = plt.figure(figsize=(20, 10))
+    plt.subplot(3, 1, 1)
     plot_distribution(posterior, title='normalized $P(S=k|X)$ - Posterior -', fig=f)
     #plt.show()
     #plt.figure(figsize=(20,5))
-    plt.subplot(2, 2, 3)
+    plt.subplot(3, 2, 3)
     plt.title("Normalized entropy")
     plt.plot(normalized_entropy)
-    plt.subplot(2, 2, 4)
+    plt.subplot(3, 2, 4)
     plt.title("Standard deviation")
     plt.plot(np.array(var_array)**(0.5))
+    if real_positions is not None:
+        plt.subplot(3, 1, 3)
+        measurements_options = list(set(measurements[:n_steps]))
+        color = ['r','b','g','y','k']
+        map_dict = {}
+        for i,meas in enumerate(measurements_options):
+            map_dict[meas] = color[i]
+        for i, measurement in enumerate(measurements[:n_steps]):
+            plt.scatter(i, real_positions[i], color=map_dict[measurement], label=measurement)
+        plt.plot(real_positions)
+        class_colours = color[:len(measurements_options)]
+        recs = []
+        for i in range(0,len(class_colours)):
+            recs.append(mpatches.Rectangle((0,0),1,1,fc=class_colours[i]))
+        plt.legend(recs,measurements_options,loc=4)
+        plt.xlabel('iteration')
+        plt.ylabel('Robot position')
+        
     plt.show()
     print("normalized entropy of last posterior:", normalized_entropy[-1])
 
 
-def plot_interactive_histogram(measurements, transition, likelihood, prior, steps, initial_slider_pos=10):
+def plot_interactive_histogram(measurements, transition, likelihood, prior, steps, real_locations=None, initial_slider_pos=10):
     plot_histogram_result_interactive = lambda n_steps=initial_slider_pos: plot_histogram_entropy_std(measurements, transition, 
-                                                                                          likelihood, prior, 
-                                                                                          n_steps) 
+                                                                                          likelihood, prior,
+                                                                                          n_steps, real_positions = real_locations) 
 
     interact(plot_histogram_result_interactive, n_steps = widgets.IntSlider(min=1, max=steps,
                                                                             step=1, value=initial_slider_pos,
