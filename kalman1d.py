@@ -26,7 +26,7 @@ def plot_gaussian(mu=0, sig=1, points=200, N=2, marker=None, label=None, x=None,
     return x, y
 
 def plot_filter_densities(ax, X_est_prior, P_prior, X_updated, P_updated, X_predicted, P_predicted,
-                          Z=None, actual_position=None, points=200, x_limits=None, N_stds=2):
+                          Z=None, actual_position=None, points=200, x_limits=None, N_stds=2, show_legends=True):
     if x_limits is None:
         X_array = np.array([X_est_prior, X_updated, X_predicted])
         p_array = np.array([P_prior, P_updated, P_predicted])
@@ -56,12 +56,17 @@ def plot_filter_densities(ax, X_est_prior, P_prior, X_updated, P_updated, X_pred
     if actual_position is not None:
         ax.scatter(actual_position, 0, s=100, color="g", alpha=0.5,
                    label='actual position=%.2f'%actual_position)
+    
+    if show_legends:
+        ax.legend()
 
-    ax.legend()
-
-def plot_kalman_filter_results(updated_means, predicted_means, measurements, real_positions, update_variances=None, predicted_variances=None):
+def plot_kalman_filter_results(updated_means, predicted_means, measurements, real_positions, update_variances=None, 
+                               predicted_variances=None, iteration_pos=None):
     plt.plot(updated_means, color = 'b', label = 'updated after observation')
     plt.plot(predicted_means, color = 'y', label = 'predicted')
+    if iteration_pos is not None:
+        plt.axvline(x=iteration_pos-1)
+
     if update_variances is not None:
         plt.plot(updated_means+ 1*np.array(update_variances), color = 'k', ls='dashdot')
         plt.plot(updated_means- 1*np.array(update_variances), color = 'k', ls='dashdot')
@@ -74,63 +79,87 @@ def plot_kalman_filter_results(updated_means, predicted_means, measurements, rea
     plt.plot(real_positions, color = 'g', label = 'real positions')
     plt.legend()
 
-def plot_filter_densitiy_mean_std(n_steps, measurements, X_o, P_0, sigma_v, sigma_w, h = 1, a = 1, b = 1, U = 1,\
-                                 x_limits = None, points = 200, N_stds=3, real_positions=None):  
-    measurements_limited = measurements[:n_steps]
-    real_positions_limited = real_positions[:n_steps]
-    updated_means, update_variances, predicted_means, predicted_variances, kalman_gains = kalman_filter(measurements_limited, 
-                                                                                      X_o, P_0, 
-                                                                                      sigma_v, 
-                                                                                      sigma_w, h = 1, a = 1, 
-                                                                                      b = 1, U = U)
-    
-    X_est_prior = predicted_means[-2]
-    P_prior = predicted_variances[-2]
-    X_updated = updated_means[-1]
-    P_updated = update_variances[-1]
-    X_predicted = predicted_means[-1]
-    P_predicted = predicted_variances[-1]
+def plot_filter_densitiy_mean_std(n_steps, measurements, updated_means, update_variances,
+                                  predicted_means, predicted_variances, kalman_gains,
+                                  P_pred_asynt=None, P_upd_asynt=None, K_asynt=None,
+                                  x_limits=None, points=200, N_stds=3, real_positions=None,
+                                  show_legends=True, slider_window=50):
+
+    measurements = measurements[:slider_window]
+    real_positions = real_positions[:slider_window]
+
+    updated_means = updated_means[:slider_window]
+    update_variances = update_variances[:slider_window]
+    predicted_means = predicted_means[:slider_window]
+    predicted_variances = predicted_variances[:slider_window]
+    kalman_gains = kalman_gains[:slider_window]
+
+    X_est_prior = predicted_means[n_steps-2]
+    P_prior = predicted_variances[n_steps-2]
+    X_updated = updated_means[n_steps-1]
+    P_updated = update_variances[n_steps-1]
+    X_predicted = predicted_means[n_steps-1]
+    P_predicted = predicted_variances[n_steps-1]
     actual_position = None
     if real_positions is not None:
-        actual_position = real_positions_limited[-1]
+        actual_position = real_positions[n_steps-1]
 
     f = plt.figure(figsize=(20, 14))
     ax = plt.subplot(3, 1, 1)
 
-    plot_filter_densities(ax, X_est_prior, P_prior, X_updated, P_updated,X_predicted, P_predicted, Z=measurements_limited[-1], 
+    plot_filter_densities(ax, X_est_prior, P_prior, X_updated, P_updated,X_predicted, P_predicted, Z=measurements[n_steps-1], 
                             actual_position = actual_position, points = points, N_stds = N_stds, 
-                            x_limits = x_limits)
+                            x_limits = x_limits, show_legends=show_legends)
     
     ax.set_xlabel('POSITION')
 
     ax = plt.subplot(3, 2, 3)
-    plot_kalman_filter_results(updated_means, predicted_means, measurements_limited, real_positions_limited)
+    plot_kalman_filter_results(updated_means, predicted_means, measurements, real_positions, iteration_pos=n_steps)
     ax.set_xlabel('iteration number')
 
     ax = plt.subplot(3, 2, 4)
     plt.plot(update_variances, label=r'Update variance $P_{n|n}$')
     plt.plot(predicted_variances, label=r'Prediction variance $P_{n|n-1}$')
+    plt.axvline(x=n_steps-1)
+
+    n_points = len(update_variances)
+    
+
+    if P_upd_asynt is not None:
+        plt.plot(np.ones(n_points)*P_upd_asynt, color = 'k', ls='dashdot', label='update error asyntote')
+
+    if P_pred_asynt is not None:
+        plt.plot(np.ones(n_points)*P_pred_asynt, color = 'k', ls='dotted', label='prediction error asyntote')
     plt.legend()
     ax.set_xlabel('iteration number')
 
     ax = plt.subplot(3, 1, 3)
     plt.plot(kalman_gains, label='Kalman Gain')
+    plt.axvline(x=n_steps-1)
+    if K_asynt is not None:
+        plt.plot(np.ones(n_points)*K_asynt, color = 'k', ls='dashdot', label='kalman gain asyntote')
     ax.set_xlabel('iteration number')
-    
+    plt.legend()
 
     plt.show()
 
 
-def plot_interactive_kalman_filter(measurements, X_o, P_0, sigma_v, sigma_w, steps, h = 1, a = 1, b = 1,U = 1,\
-                                    N_stds=3, real_positions=None, x_limits = None, initial_slider_pos=5):
-    # steps is the max number of steps
+def plot_interactive_kalman_filter(measurements, updated_means, update_variances,
+                                   predicted_means, predicted_variances, kalman_gains, 
+                                   P_pred_asynt=None, P_upd_asynt=None, K_asynt=None,
+                                   N_stds=3,max_number_of_steps=20, show_legends=True,
+                                   real_positions=None, x_limits=None, initial_slider_pos=5,
+                                   points=200):
+
     if x_limits is None:
-        x_limits = [min(measurements[:steps]), max(measurements[:steps])]
-    plot_interactive_kalman_filter_result =lambda n_steps= initial_slider_pos:plot_filter_densitiy_mean_std(n_steps, measurements, X_o, P_0, sigma_v, 
-                                        sigma_w, h = h, a = a, b = b, U = U, N_stds=N_stds, real_positions=real_positions, x_limits=x_limits)
+        x_limits = [min(measurements[:max_number_of_steps]), max(measurements[:max_number_of_steps])]
+    plot_interactive_kalman_filter_result =lambda n_steps= initial_slider_pos:plot_filter_densitiy_mean_std(n_steps, measurements, 
+    updated_means, update_variances,predicted_means, predicted_variances, kalman_gains,
+    P_pred_asynt=P_pred_asynt, P_upd_asynt=P_upd_asynt, K_asynt=K_asynt, show_legends=show_legends,
+    N_stds=N_stds, real_positions=real_positions, x_limits=x_limits, points=points, slider_window=max_number_of_steps)
 
 
-    interact(plot_interactive_kalman_filter_result, n_steps = widgets.IntSlider(min=1, max=steps,
+    interact(plot_interactive_kalman_filter_result, n_steps = widgets.IntSlider(min=1, max=max_number_of_steps,
                                                                             step=1, value=initial_slider_pos,
                                                                             continuous_update=False))
 
@@ -228,14 +257,15 @@ class Kalman1D:
                         self.X_0, self.P_0, self.sigma_v, self.sigma_w, h=self.h, a=self.a, b=self.b, U=self.U)
 
 
-    def plot_kalman_filter_steps(self, number_of_graphs=12, points=200):
+    def plot_kalman_filter_steps(self, number_of_graphs=12, points=200, x_limits=None, show_legends=True):
         measurements = self.measurements[:number_of_graphs]
 
         rows = int(np.ceil(len(measurements)/3))
         f, ax = plt.subplots(rows, 3, sharey=True, sharex=True, figsize=(20, 10))
         ax = ax.flatten()
-        x_min = min(measurements)
-        x_max = max(measurements)
+        if x_limits==None:
+            x_limits=[min(measurements), max(measurements)]
+
         actual_position = None
         X_est_prior = self.X_0
         P_prior = self.P_0
@@ -252,11 +282,29 @@ class Kalman1D:
 
             plot_filter_densities(ax[n], X_est_prior, P_prior, X_updated, P_updated, X_predicted,
                                   P_predicted, Z=Z, actual_position=actual_position,
-                                  points=points, x_limits=[x_min, x_max])
+                                  points=points, x_limits=x_limits, show_legends=show_legends)
 
             X_est_prior = X_predicted
             P_prior = P_predicted
         plt.show()
+
+    def generate_ideal_samples(self, iterations = 20):
+        measurements, ground_truths = generate_sample(X_o=self.X_0, sigma_w=0, 
+                                                        sigma_v=0,
+                                                        h=self.h, a=self.a, b=self.b, U=self.U,
+                                                        steps=iterations)
+        self.measurements = measurements
+        self.ground_truths = ground_truths
+        return measurements, ground_truths
+    
+    def generate_ideal_walking_samples(self, iterations = 20):
+        measurements, ground_truths = generate_sample(X_o=self.X_0, sigma_w=0, 
+                                                        sigma_v=self.sigma_v,
+                                                        h=self.h, a=self.a, b=self.b, U=self.U,
+                                                        steps=iterations)
+        self.measurements = measurements
+        self.ground_truths = ground_truths
+        return measurements, ground_truths
 
     def generate_model_samples(self, iterations = 20):
         measurements, ground_truths = generate_sample(X_o=self.X_0, sigma_w=self.sigma_w, 
@@ -267,10 +315,32 @@ class Kalman1D:
         self.ground_truths = ground_truths
         return measurements, ground_truths
 
-    def plot_interactive_kalman_filter(self, max_number_of_steps=20 , initial_slider_pos=5, x_limits=None, N_stds=3):
-        plot_interactive_kalman_filter(self.measurements, self.X_0, self.P_0, 
-                                       self.sigma_v, self.sigma_w, max_number_of_steps, 
-                                       h = self.h, a = self.a, b = self.b, U = self.U,
-                                       N_stds=N_stds, real_positions=self.ground_truths , 
-                                       x_limits = x_limits, 
+    def plot_interactive_kalman_filter(self, max_number_of_steps=20 , initial_slider_pos=5, x_limits=None, 
+                                       N_stds=3, points=200):
+        P_pred_asynt, P_upd_asynt, K_asynt = self.get_asyntotic_params()
+        plot_interactive_kalman_filter(self.measurements, self.updated_Xs, self.updated_Ps,
+                                       self.predicted_Xs, self.predicted_Ps, self.kalman_gains,
+                                       P_pred_asynt=P_pred_asynt, P_upd_asynt=P_upd_asynt, K_asynt=K_asynt,
+                                       max_number_of_steps = max_number_of_steps,
+                                       N_stds=N_stds, real_positions=self.ground_truths, 
+                                       x_limits = x_limits, points=points,
                                        initial_slider_pos=initial_slider_pos)
+
+    def get_asyntotic_params(self):
+        sig_v = self.sigma_v
+        sig_w = self.sigma_w
+        a = self.a
+        P_pred = (sig_w + sig_v*(a**2-1) +  np.sqrt((sig_w + sig_v*(a**2-1))**2 + 4*sig_w*sig_v))/2
+        P_obs = P_pred - sig_w
+        K = P_pred/(P_pred + sig_v)
+        return P_pred, P_obs, K
+
+    def plot_kalman_filter_results(self):
+        plt.plot(self.measurements, color='r', label='measurements')
+        plt.plot(self.predicted_Xs, color='k', label='predicted')
+        plt.plot(self.updated_Xs, color='y', label='estimated')
+        
+        plt.plot(self.ground_truths, color='b', label='real positions')
+        
+        plt.legend()
+
