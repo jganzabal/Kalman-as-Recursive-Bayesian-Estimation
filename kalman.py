@@ -46,55 +46,6 @@ def predict(sigma_w, X_updated, P_updated, a = 1, b = 1, U = 1):
     P_predicted = (a**2)*sigma_w + P_updated
     return X_predicted, P_predicted
 
-def kalman_filter(measurements, X_est_prior, P_prior, sigma_v, sigma_w, h = 1, a = 1, b = 1, U = 1):
-    updated_means = [X_est_prior]
-    update_variances = [P_prior]
-    predicted_means = [X_est_prior]
-    predicted_variances = [P_prior]
-    for n in range(len(measurements)):
-        Z = measurements[n]
-        X_updated, P_updated = update(h, sigma_v, Z, X_est_prior ,P_prior)
-        updated_means.append(X_updated)
-        update_variances.append(P_updated)
-            
-        X_predicted, P_predicted = predict(sigma_w, X_updated, P_updated, a = a, b = b, U = U)
-        predicted_means.append(X_predicted)
-        predicted_variances.append(P_predicted)
-        
-        X_est_prior = X_predicted
-        P_prior = P_predicted
-    return updated_means, update_variances, predicted_means, predicted_variances
-
-
-
-def plot_kalman_process(measurements, X_est_prior, P_prior, sigma_v, sigma_w, real_positions=None, points = 200, h = 1, a = 1, b = 1, U = 1):
-    #x = np.linspace(X_est_prior-2*2, X_est_prior+2*10, points)
-    rows = int(np.ceil(len(measurements)/3))
-    f, ax = plt.subplots(rows, 3, sharey=True, sharex=True, figsize = (20,10))
-    ax = ax.flatten()
-    x_min = min(measurements)
-    x_max = max(measurements)
-    for n in range(len(measurements)):
-        #label_data = '$\mu=%0.2f$  -  $\sigma^2=%0.2f$'%(X_est_prior,P_prior)
-        #plot_gaussian(mu=X_est_prior, sig= P_prior, points = points, N = 2, x=x, label = '(Prior) '+label_data, color = 'b', ax=ax[n])
-        Z = measurements[n]
-        actual_position = real_positions[n]
-        X_updated, P_updated = update(h, sigma_v, Z, X_est_prior ,P_prior)
-        #label_data = '$\mu=%0.2f$  -  $\sigma^2=%0.2f$'%(X_updated,P_updated)
-        #plot_gaussian(mu=X_updated, sig= P_updated, points = points, N = 2, x=x, label = '(Update) '+label_data, color = 'r', ax=ax[n])
-        
-        X_predicted, P_predicted = predict(sigma_w, X_updated, P_updated, a = a, b = b, U = U)
-        #label_data = '$\mu=%0.2f$  -  $\sigma^2=%0.2f$'%(X_predicted,P_predicted)
-        #plot_gaussian(mu=X_predicted, sig= P_predicted, points = points, N = 2, x=x, label = '(Predict) '+label_data, color = 'y', ax=ax[n])
-        
-        plot_filter_densities(ax[n], X_est_prior, P_prior, X_updated, P_updated,X_predicted, P_predicted, 
-                        Z = Z, actual_position=actual_position, points = points, x_limits = [x_min, x_max])
-
-        #ax[n].legend()
-        #ax[n].set_xlabel('Z = %0.2f'%Z)
-        X_est_prior = X_predicted
-        P_prior = P_predicted
-    plt.show()
 
 
 def generate_sample(X_o = 0, sigma_w = 0.1,sigma_v = 0.1, h = 1, a = 1, b = 1, U = 1, steps = 10):
@@ -139,6 +90,27 @@ def get_asyntotic_params(sig_v, sig_w, a = 1):
     print(P_pred, P_obs, K, p_n1)
 
 
+def plot_kalman_process(measurements, X_est_prior, P_prior, sigma_v, sigma_w, real_positions=None, points = 200, h = 1, a = 1, b = 1, U = 1):
+    rows = int(np.ceil(len(measurements)/3))
+    f, ax = plt.subplots(rows, 3, sharey=True, sharex=True, figsize = (20,10))
+    ax = ax.flatten()
+    x_min = min(measurements)
+    x_max = max(measurements)
+    for n in range(len(measurements)):
+        Z = measurements[n]
+        actual_position = real_positions[n]
+        X_updated, P_updated = update(h, sigma_v, Z, X_est_prior ,P_prior)
+        
+        X_predicted, P_predicted = predict(sigma_w, X_updated, P_updated, a = a, b = b, U = U)
+        
+        plot_filter_densities(ax[n], X_est_prior, P_prior, X_updated, P_updated,X_predicted, P_predicted, 
+                        Z = Z, actual_position=actual_position, points = points, x_limits = [x_min, x_max])
+
+        X_est_prior = X_predicted
+        P_prior = P_predicted
+    plt.show()
+
+
 def plot_filter_densities(ax, X_est_prior, P_prior, X_updated, P_updated,X_predicted, P_predicted, Z = None, actual_position = None, points = 200, x_limits = None, N_stds = 2):
     if x_limits is None:
         X_array = np.array([X_est_prior, X_updated, X_predicted])
@@ -167,11 +139,11 @@ def plot_filter_densities(ax, X_est_prior, P_prior, X_updated, P_updated,X_predi
         ax.scatter(actual_position, 0, s=100, color="g", alpha=0.5, label = 'actual position=%.2f'%actual_position)
 
     ax.legend()
-    #ax.set_xlabel('Z = %0.2f'%Z)
+    
 
 def plot_kalman_filter_results(updated_means, predicted_means, measurements, real_positions, update_variances=None, predicted_variances=None):
-    plt.plot(updated_means[1:], color = 'b', label = 'updated after observation')
-    plt.plot(predicted_means[1:], color = 'y', label = 'predicted')
+    plt.plot(updated_means, color = 'b', label = 'updated after observation')
+    plt.plot(predicted_means, color = 'y', label = 'predicted')
     if update_variances is not None:
         plt.plot(updated_means+ 1*np.array(update_variances), color = 'k', ls='dashdot')
         plt.plot(updated_means- 1*np.array(update_variances), color = 'k', ls='dashdot')
@@ -228,3 +200,24 @@ def plot_interactive_kalman_filter(measurements, X_o, P_0, sigma_v, sigma_w, ste
     interact(plot_interactive_kalman_filter_result, n_steps = widgets.IntSlider(min=1, max=steps,
                                                                             step=1, value=initial_slider_pos,
                                                                             continuous_update=False))
+
+
+def kalman_filter(measurements, X_est_prior, P_prior, sigma_v, sigma_w, h = 1, a = 1, b = 1, U = 1):
+    updated_means = []
+    update_variances = []
+    predicted_means = []
+    predicted_variances = []
+    for n in range(len(measurements)):
+        Z = measurements[n]
+        X_updated, P_updated = update(h, sigma_v, Z, X_est_prior ,P_prior)
+        X_predicted, P_predicted = predict(sigma_w, X_updated, P_updated, a = a, b = b, U = U)
+
+        updated_means.append(X_updated)
+        update_variances.append(P_updated)
+        predicted_means.append(X_predicted)
+        predicted_variances.append(P_predicted)
+        
+        X_est_prior = X_predicted
+        P_prior = P_predicted
+    return updated_means, update_variances, predicted_means, predicted_variances
+
