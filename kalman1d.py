@@ -337,7 +337,7 @@ class Kalman1D:
 
     def plot_kalman_filter_results(self):
         plt.plot(self.measurements, color='r', label='measurements')
-        plt.plot(self.predicted_Xs, color='k', label='predicted')
+        #plt.plot(self.predicted_Xs, color='k', label='predicted')
         plt.plot(self.updated_Xs, color='y', label='estimated')
         
         plt.plot(self.ground_truths, color='b', label='real positions')
