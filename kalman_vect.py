@@ -8,12 +8,13 @@ def gauss_n_dimensional(x, y, Sigma, mu):
     X = np.vstack((x, y)).T
     X_centered = X-np.array(mu).flatten()
     mat_multi = np.dot(X_centered.dot(Sigma.I), X_centered.T)
+    
     return  np.diag(np.exp(-1*(mat_multi)))
 
 def plot_countour(x, y, z, limits, color='r', label=''):
     # define grid.
-    xi = np.linspace(limits[0], limits[1], 100)
-    yi = np.linspace(limits[2], limits[3], 100)
+    xi = np.linspace(limits[0], limits[1], 400)
+    yi = np.linspace(limits[2], limits[3], 400)
     ## grid the data.
     zi = griddata((x, y), z, (xi[None, :], yi[:, None]), method='cubic')
     levels = [0.85, 0.9, 0.95]
@@ -31,19 +32,16 @@ def plot_countour(x, y, z, limits, color='r', label=''):
     #plt.xlim(-2, 2)
     #plt.ylim(-2, 2)
 
-def plot_2d_gauss(mu, Sigma, npts=1000, color='r', limits=[-1, 2, -1.5, 2.5], label=''):
+def plot_2d_gauss(mu, Sigma, x_npts=1000, y_npts=1000, color='r', limits=[-1, 2, -1.5, 2.5], label=''):
     if Sigma.shape[0] == 1:
-        infty = Sigma[0]*100000
-        Sigma = np.array([[Sigma[0], 0], [0, infty]])
+        sigma_0 = Sigma[0,0]
+        infty = sigma_0*100000
+        Sigma = np.matrix([[sigma_0, 0], [0, infty]])
 
-    x = uniform(limits[0], limits[1], npts)
-    y = uniform(limits[2], limits[3], npts)
+    x = uniform(limits[0], limits[1], x_npts)
+    y = uniform(limits[2], limits[3], y_npts)
     z = gauss_n_dimensional(x, y, Sigma, mu)
     plot_countour(x, y, z, limits=limits, color=color, label=label)
-
-
-
-
 
 
 
@@ -57,17 +55,25 @@ def plot_prediction(F, mu_x, sigma_x, Q, y_offset=0.1, npts=1000, limit=1):
     plot_2d_gauss(mu_x, sigma_x, limits=[-limit, 3*limit, -limit+y_offset, limit+y_offset], color='b', npts=npts)
     return mu_x, sigma_x
 
-def plot_update(H, R, Z, X_est_prior, P_est_prior, y_offset=0.1, npts=1000, limit=1):
-    R = np.array(R)
-    Z = np.array(Z)
-    H = np.array(H).reshape(R.shape[0], X_est_prior.shape[0])
+def update(H, R, Z, X_est_prior ,P_est_prior):
 
+    A_1 = H.T.dot(R.I).dot(H)
+
+    P = np.linalg.inv(A_1 + P_est_prior.I)
+
+    X = P.dot(H.T.dot(R.I).dot(Z) + P_est_prior.I.dot(X_est_prior))
+    return X, P
+
+def plot_update(H, R, Z, X_est_prior, P_est_prior, y_offset=0.1, x_npts=2000, y_npts=2000, limit=1):
     plt.figure(figsize=(12, 6))
-    plot_2d_gauss(X_est_prior, P_est_prior, limits=[-limit, 3*limit, -limit+y_offset, limit+y_offset], color='r', npts=npts)
-    plot_2d_gauss(Z, R, limits=[-limit, 3*limit, -limit+y_offset, limit+y_offset], color='y')
+    plot_2d_gauss(X_est_prior, P_est_prior, limits=[-limit, 3*limit, -limit+y_offset, limit+y_offset], color='r', 
+                  x_npts=x_npts, y_npts=y_npts)
+    plot_2d_gauss(Z, R, limits=[-limit, 3*limit, -limit+y_offset, limit+y_offset], color='y',
+                  x_npts=x_npts, y_npts=y_npts)
 
     X_est, P = update(H, R, Z, X_est_prior, P_est_prior)
-    plot_2d_gauss(X_est, P, limits=[-limit,3*limit, -limit+y_offset, limit+y_offset], color='b')
+    plot_2d_gauss(X_est, P, limits=[-limit,3*limit, -limit+y_offset, limit+y_offset], color='b',
+                  x_npts=x_npts, y_npts=y_npts)
     return X_est, P
 
 
@@ -121,14 +127,14 @@ def kalman_filter(measurements, X_est_prior, P_prior, H, R, F, Q):
 
 def generate_sample(X_0, Q, R, H, F, steps=10):
     HdotX = H.dot(X_0)
-    measurements = [HdotX + np.random.multivariate_normal(np.zeros(R.shape[0]), R)]
+    measurements = [HdotX + np.random.multivariate_normal(np.zeros(R.shape[0]), R).reshape(-1,1)]
     ground_truths = [X_0]
     X_k = X_0
     for i in range(steps):
         X_k = F.dot(X_k) +  np.random.multivariate_normal(np.zeros(len(X_k)), Q).reshape(len(X_k), 1)
         ground_truths.append(X_k)
         HdotX = H.dot(X_k)
-        Z = HdotX + np.random.multivariate_normal(np.zeros(R.shape[0]), R)
+        Z = HdotX + np.random.multivariate_normal(np.zeros(R.shape[0]), R).reshape(-1,1)
         measurements.append(Z)
     return measurements, ground_truths
 
