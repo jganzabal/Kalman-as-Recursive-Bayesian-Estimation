@@ -1,6 +1,8 @@
 # Kalman Filter as Recursive Bayesian Estimation
-This is a step by step tutorial from histogram filters to N dimensional Kalman Filters
-It is based on the excelent Udacity course given by Sebastian Thrun
+This is a step by step tutorial from histogram filters to N dimensional Kalman Filters.
+
+It is based on the excelent Udacity course given by Sebastian Thrun:
+
 https://classroom.udacity.com/courses/cs373/
 
 It covers:
