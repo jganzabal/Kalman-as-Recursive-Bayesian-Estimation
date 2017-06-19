@@ -180,6 +180,24 @@ class Kalman:
 
         return X, P
 
+    def update_with_kalman_gain(self, Z, X_est_prior, P_est_prior):
+        Z = np.matrix(Z)
+        X_est_prior = np.matrix(X_est_prior)
+        P_est_prior = np.matrix(P_est_prior)
+
+        H = self.H
+        R = self.R
+
+        S = R + H.dot(P_est_prior).dot(H.T)
+
+        K = P_est_prior.dot(H.T).dot(S.I)
+
+        X = X_est_prior + K.dot(Z-H.dot(X_est_prior))
+
+        P = (np.identity(P_est_prior.shape[0]) - K.dot(H)).dot(P_est_prior)
+
+        return X, P, K
+
     def predict(self, X_est, P_est):
         X_est = np.matrix(X_est)
         P_est = np.matrix(P_est)
@@ -219,15 +237,15 @@ class Kalman:
         kalman_gains = []
 
         for n, Z in enumerate(measurements):
-            X_updated, P_updated = self.update(Z, X_est_prior, P_prior)
+            X_updated, P_updated, K = self.update_with_kalman_gain(Z, X_est_prior, P_prior)
             X_predicted, P_predicted = self.predict(X_updated, P_updated)
 
             updated_means.append(X_updated)
             update_covariances.append(P_updated)
             predicted_means.append(X_predicted)
             predicted_covariances.append(P_predicted)
-            #kalman_gains.append(K)
+            kalman_gains.append(K)
 
             X_est_prior = X_predicted
             P_prior = P_predicted
-        return updated_means, update_covariances, predicted_means, predicted_covariances 
+        return updated_means, update_covariances, predicted_means, predicted_covariances, kalman_gains 
