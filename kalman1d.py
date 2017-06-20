@@ -1,6 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from ipywidgets import *
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
 ## Auxiliary functions ##
 def gaussian(x, mu, sig):
@@ -24,6 +25,12 @@ def plot_gaussian(mu=0, sig=1, points=200, N=2, marker=None, label=None, x=None,
         ax.set_xticklabels(labels)
 
     return x, y
+
+def draw_image(x, y, file, ax):
+    im = plt.imread(file)
+    oi = OffsetImage(im, zoom = 0.25)
+    box = AnnotationBbox(oi, (x, y), frameon=False)
+    ax.add_artist(box)
 
 def plot_filter_densities(ax, X_est_prior, P_prior, X_updated, P_updated, X_predicted, P_predicted,
                           Z=None, actual_position=None, points=200, x_limits=None, N_stds=2, show_legends=True):
@@ -50,13 +57,15 @@ def plot_filter_densities(ax, X_est_prior, P_prior, X_updated, P_updated, X_pred
     plot_gaussian(mu=X_predicted, sig=P_predicted, points=points, N=2, x=x,
                   label='(Predict) '+label_data, color='y', ax=ax)
 
+    
+    if actual_position is not None:
+        #ax.scatter(actual_position, 0, s=100, color="g", alpha=0.5,label='actual position=%.2f'%actual_position)
+        draw_image(actual_position, 0, './images/robot.png',ax)
+    
     if Z is not None:
         ax.scatter(Z, 0, s=100, color="r", alpha=0.5, label='measurement. Z=%.2f'%Z)
 
-    if actual_position is not None:
-        ax.scatter(actual_position, 0, s=100, color="g", alpha=0.5,
-                   label='actual position=%.2f'%actual_position)
-    
+
     if show_legends:
         ax.legend()
 
