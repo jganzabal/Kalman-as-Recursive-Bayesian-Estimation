@@ -4,6 +4,7 @@ from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
 delta = 2
 arrow_width = 0.03
+almost_zero = 0.00001
 
 def draw_state(state=0, state_label = 0):
     radius = 0.5
@@ -33,7 +34,7 @@ def draw_transition(state1=0, state2=1, text=0.1):
     x2 = delta*diff_state - 2*radius
     y = 0
     if diff_state == 1:
-        ellipse = Arc([x1+x2/2,y],x2,0,angle = 0,theta1=0, theta2=180.0,color='k', linewidth='1')
+        ellipse = Arc([x1+x2/2,y],x2,almost_zero,angle = 0,theta1=0, theta2=180.0,color='k', linewidth='1')
         plt.text(x1+x2/2, y+ 0.1, text, fontsize = 12, horizontalalignment='center', verticalalignment='bottom')
         arrow2 = FancyArrow(x1+x2/2-0.01, 0, 0.01, 0, width=arrow_width, length_includes_head=False, head_width=None, head_length=None, shape='full', overhang=0, head_starts_at_zero=False, color='k')
     else:
@@ -62,13 +63,13 @@ def draw_infinite(state1=0, state2=1, text=0.1):
     diff_state = abs(state2-state1)
     x2 = delta*diff_state - 2*radius
     y = 0
-    ellipse = Arc([x1+x2/2,y],x2,0,angle = 0,theta1=0, theta2=180.0,color='k', linewidth='1',ls='dotted')
+    ellipse = Arc([x1+x2/2,y],x2,almost_zero,angle = 0,theta1=0, theta2=180.0,color='k', linewidth='1',ls='dotted')
     arrow2 = FancyArrow(x1+x2/2-0.01, 0, 0.01, 0, width=arrow_width, length_includes_head=False, head_width=None, head_length=None, shape='full', overhang=0, head_starts_at_zero=False, color='k')
     plt.gca().add_patch(ellipse)
     plt.gca().add_patch(arrow2)
     
     y = 0
-    ellipse = Arc([1,y],x2,0,angle = 0,theta1=0, theta2=180.0,color='k', linewidth='1',ls='dotted')
+    ellipse = Arc([1,y],x2,almost_zero,angle = 0,theta1=0, theta2=180.0,color='k', linewidth='1',ls='dotted')
     plt.gca().add_patch(ellipse)
     arrow2 = FancyArrow(1-0.01, 0, 0.01, 0, width=arrow_width, length_includes_head=False, head_width=None, head_length=None, shape='full', overhang=0, head_starts_at_zero=False, color='k')
     plt.gca().add_patch(arrow2)
